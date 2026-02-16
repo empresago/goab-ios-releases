@@ -18,7 +18,7 @@ let package = Package(
         .binaryTarget(
             name: "GoABSDK",
             url: "https://devs.goab.io/ios/releases/latest/goabSdkIos.zip",
-            checksum: "e5868816b3b0d3a5b9b94e68980ca02d2fba6c5f144bf7f23e1f64f484b523c2"
+            checksum: "7a1cbee70d7e2aa67ba1554064e8617e04dd77db5288eab3fe99315e17c941d0"
         ),
     ]
 )
