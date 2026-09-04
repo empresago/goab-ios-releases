@@ -1,4 +1,5 @@
 // swift-tools-version:5.9
+// Atualizado manualmente — versão 1.0.0 (dispatch automático pendente de IOS_RELEASES_DISPATCH_TOKEN)
 
 import PackageDescription
 
@@ -9,16 +10,13 @@ let package = Package(
         .macOS(.v10_15)
     ],
     products: [
-        .library(
-            name: "GoABSDK",
-            targets: ["GoABSDK"]
-        ),
+        .library(name: "GoABSDK", targets: ["GoABSDK"])
     ],
     targets: [
         .binaryTarget(
             name: "GoABSDK",
-            url: "https://devs.goab.io/ios/releases/ab-sdk/latest/goabSdkIos.zip",
-            checksum: "1dcadf52a260151e09ffc7375639bd30de7a913fe6e2257f2f3b0f069b561a61"
-        ),
+            url: "https://devs.goab.io/ios/releases/ab-sdk/1.0.0/goabSdkIos.zip",
+            checksum: "a99fc6e5583b7c748090d145b8fcde49adecea4733655318e270141e97e102ee"
+        )
     ]
 )
