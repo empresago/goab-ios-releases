@@ -1,0 +1,94 @@
+# Atualiza Package.swift (url + checksum) e cria a tag da versão, via
+# repository_dispatch disparado pelo repo goab-ios-sdk após a publicação de prod.
+#
+# client_payload:
+#   version  — semver publicada (ex.: 1.2.0)
+#   url      — URL CDN do goabSdkIos.zip (versionada)
+#   checksum — SHA256 do zip (64 hex)
+
+name: Atualizar Package.swift
+
+on:
+  repository_dispatch:
+    types: [update-ab-sdk-package]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: goab-ios-releases-update-package
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar payload
+        env:
+          VERSION: ${{ github.event.client_payload.version }}
+          URL: ${{ github.event.client_payload.url }}
+          CHECKSUM: ${{ github.event.client_payload.checksum }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERSION:-}" ] || [ -z "${URL:-}" ] || [ -z "${CHECKSUM:-}" ]; then
+            echo "Payload incompleto. Esperado: version, url, checksum." >&2
+            exit 1
+          fi
+          echo "${CHECKSUM}" | grep -Eq '^[a-f0-9]{64}$' || {
+            echo "Checksum inválido (SHA256 hex 64): ${CHECKSUM}" >&2; exit 1; }
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gerar Package.swift
+        env:
+          VERSION: ${{ github.event.client_payload.version }}
+          URL: ${{ github.event.client_payload.url }}
+          CHECKSUM: ${{ github.event.client_payload.checksum }}
+        run: |
+          set -euo pipefail
+          cat > Package.swift <<EOF
+          // swift-tools-version:5.9
+          // Atualizado via repository_dispatch — versão ${VERSION}
+
+          import PackageDescription
+
+          let package = Package(
+              name: "GoABSDK",
+              platforms: [
+                  .iOS(.v13),
+                  .macOS(.v10_15)
+              ],
+              products: [
+                  .library(name: "GoABSDK", targets: ["GoABSDK"])
+              ],
+              targets: [
+                  .binaryTarget(
+                      name: "GoABSDK",
+                      url: "${URL}",
+                      checksum: "${CHECKSUM}"
+                  )
+              ]
+          )
+          EOF
+
+      - name: Commit + tag + push
+        env:
+          VERSION: ${{ github.event.client_payload.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Package.swift
+          if ! git diff --staged --quiet; then
+            git commit -m "Update Package.swift v${VERSION}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+          if git rev-parse "v${VERSION}" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "v${VERSION}" >/dev/null 2>&1; then
+            echo "Tag v${VERSION} já existe; nada a fazer."
+          else
+            git tag -a "v${VERSION}" -m "Release v${VERSION}"
+            git push origin "v${VERSION}"
+          fi
